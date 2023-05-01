@@ -1,1 +1,1 @@
-# Mobile Development: Audio Player App
+Audio Player App
