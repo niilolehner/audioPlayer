@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:audioplayers/audioplayers.dart';
 
 void main() {
@@ -31,11 +33,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   AudioPlayer audioPlayer = AudioPlayer();
   bool isPlaying = false;
-  List<String> audioFiles = [
-    'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-    'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
-    'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
-  ];
+  List<String> audioFiles = [];
   int currentTrackIndex = 0;
   double currentPosition = 0.0;
   double totalDuration = 0.0;
@@ -100,8 +98,10 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  void _addAudioFile(String url) async{
-    setState(() {audioFiles.add(url);});
+  void _addAudioFile(File file) async {
+    setState(() {
+      audioFiles.add(file.path);
+    });
   }
 
   void _removeAudioFile(int index) async{
@@ -111,36 +111,15 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  Future<void> _showAddAudioDialog(BuildContext context) async{
-    TextEditingController urlController = TextEditingController();
-    return showDialog<void>(
-      context: context,
-      builder: (BuildContext context){
-        return AlertDialog(
-          title: Text('Add Audio File'),
-          content: TextField(
-            controller: urlController,
-            decoration: InputDecoration(hintText: 'Enter URL'),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: Text('Cancel'),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            TextButton(
-              child: Text('Add'),
-              onPressed: (){
-                String url = urlController.text;
-                if(url.isNotEmpty){
-                  _addAudioFile(url);
-                }
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
+  Future<void> _showAddAudioDialog(BuildContext context) async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.audio,
     );
+
+    if (result != null) {
+      File file = File(result.files.single.path!);
+      _addAudioFile(file);
+    }
   }
 
   Future<void> _showRemoveAudioDialog(BuildContext context, int index) async{
@@ -149,7 +128,7 @@ class _MyHomePageState extends State<MyHomePage> {
       builder: (BuildContext context){
         return AlertDialog(
           title: Text('Remove Audio File'),
-          content: Text('Are you sure you want to remove this audio file?'),
+          content: Text('Remove this audio file?'),
           actions: <Widget>[
             TextButton(
               child: Text('Cancel'),
