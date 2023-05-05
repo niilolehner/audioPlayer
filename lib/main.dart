@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(MyApp());
@@ -41,6 +42,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
+    _loadData();
     audioPlayer.onAudioPositionChanged.listen((Duration position) {
       setState(() {
         currentPosition = position.inMilliseconds.toDouble();
@@ -51,6 +53,31 @@ class _MyHomePageState extends State<MyHomePage> {
         totalDuration = duration.inMilliseconds.toDouble();
       });
     });
+  }
+
+  @override
+  void dispose() {
+    _saveData();
+    super.dispose();
+  }
+
+  void _saveData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('audioFiles', audioFiles);
+    await prefs.setInt('currentTrackIndex', currentTrackIndex);
+    await prefs.setDouble('currentPosition', currentPosition);
+    await prefs.setDouble('totalDuration', totalDuration);
+  }
+
+  void _loadData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      audioFiles = prefs.getStringList('audioFiles') ?? [];
+      currentTrackIndex = prefs.getInt('currentTrackIndex') ?? 0;
+      currentPosition = prefs.getDouble('currentPosition') ?? 0.0;
+      totalDuration = prefs.getDouble('totalDuration') ?? 0.0;
+    });
+    audioPlayer.seek(Duration(milliseconds: currentPosition.toInt()));
   }
 
   void _play() async {
@@ -95,6 +122,7 @@ class _MyHomePageState extends State<MyHomePage> {
       setState(() {
         currentPosition = position;
       });
+      _saveData();
     }
   }
 
@@ -102,6 +130,7 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {
       audioFiles.add(file.path);
     });
+    _saveData();
   }
 
   void _removeAudioFile(int index) async{
@@ -109,6 +138,7 @@ class _MyHomePageState extends State<MyHomePage> {
     if(currentTrackIndex >= audioFiles.length){
       currentTrackIndex = audioFiles.length -1;
     }
+    _saveData();
   }
 
   Future<void> _showAddAudioDialog(BuildContext context) async {
@@ -189,6 +219,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         currentTrackIndex = index;
                       });
                       _play();
+                      _saveData();
                     },
                     trailing : IconButton(
                       icon : Icon(Icons.delete),
