@@ -1,16 +1,18 @@
+// Tuodaan tarvittavat kirjastot
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+// Käynnistetään sovellus
 void main() {
   runApp(MyApp());
 }
-
+// Luodaan tilaton widget MyApp
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    // Palautetaan MaterialApp-widget
     return MaterialApp(
       title: 'AUDIO PLAYER',
       theme: ThemeData(
@@ -21,7 +23,7 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
+// Luodaan tilallinen widget MyHomePage
 class MyHomePage extends StatefulWidget {
   MyHomePage({Key? key, required this.title}) : super(key: key);
 
@@ -30,7 +32,7 @@ class MyHomePage extends StatefulWidget {
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
-
+// Luodaan tila _MyHomePageState-widgetille
 class _MyHomePageState extends State<MyHomePage> {
   AudioPlayer audioPlayer = AudioPlayer();
   bool isPlaying = false;
@@ -38,7 +40,7 @@ class _MyHomePageState extends State<MyHomePage> {
   int currentTrackIndex = 0;
   double currentPosition = 0.0;
   double totalDuration = 0.0;
-
+  // Alustetaan tila
   @override
   void initState() {
     super.initState();
@@ -54,13 +56,13 @@ class _MyHomePageState extends State<MyHomePage> {
       });
     });
   }
-
+  // Vapautetaan resurssit/tallennetaan kun widget poistetaan
   @override
   void dispose() {
     _saveData();
     super.dispose();
   }
-
+  // Tallennetaan tiedot SharedPreferences-olioon
   void _saveData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setStringList('audioFiles', audioFiles);
@@ -68,7 +70,7 @@ class _MyHomePageState extends State<MyHomePage> {
     await prefs.setDouble('currentPosition', currentPosition);
     await prefs.setDouble('totalDuration', totalDuration);
   }
-
+  // Ladataan tiedot SharedPreferences-oliosta
   void _loadData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -79,7 +81,7 @@ class _MyHomePageState extends State<MyHomePage> {
     });
     audioPlayer.seek(Duration(milliseconds: currentPosition.toInt()));
   }
-
+  // Toistetaan äänitiedostoa
   void _play() async {
     int result = await audioPlayer.play(audioFiles[currentTrackIndex]);
     if (result == 1) {
@@ -88,7 +90,7 @@ class _MyHomePageState extends State<MyHomePage> {
       });
     }
   }
-
+  // Keskeytetään äänitiedoston toisto
   void _pause() async {
     int result = await audioPlayer.pause();
     if (result == 1) {
@@ -97,7 +99,7 @@ class _MyHomePageState extends State<MyHomePage> {
       });
     }
   }
-
+  // Siirrytään seuraavaan äänitiedostoon
   void _nextTrack() {
     if (currentTrackIndex < audioFiles.length - 1) {
       setState(() {
@@ -106,7 +108,7 @@ class _MyHomePageState extends State<MyHomePage> {
       _play();
     }
   }
-
+  // Siirrytään edelliseen äänitiedostoon
   void _previousTrack() {
     if (currentTrackIndex > 0) {
       setState(() {
@@ -115,7 +117,7 @@ class _MyHomePageState extends State<MyHomePage> {
       _play();
     }
   }
-
+  // Siirretään äänitiedoston toistokohtaa
   void _seek(double position) async {
     int result = await audioPlayer.seek(Duration(milliseconds: position.toInt()));
     if (result == 1) {
@@ -125,14 +127,14 @@ class _MyHomePageState extends State<MyHomePage> {
       _saveData();
     }
   }
-
+  // Lisätään uusi äänitiedosto
   void _addAudioFile(File file) async {
     setState(() {
       audioFiles.add(file.path);
     });
     _saveData();
   }
-
+  // Poistetaan äänitiedosto
   void _removeAudioFile(int index) async{
     setState(() {audioFiles.removeAt(index);});
     if(currentTrackIndex >= audioFiles.length){
@@ -140,7 +142,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
     _saveData();
   }
-
+  // Näytetään dialogi äänitiedoston lisäämiseksi
   Future<void> _showAddAudioDialog(BuildContext context) async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.audio,
@@ -151,7 +153,7 @@ class _MyHomePageState extends State<MyHomePage> {
       _addAudioFile(file);
     }
   }
-
+  // Näytetään dialogi äänitiedoston poistamiseksi
   Future<void> _showRemoveAudioDialog(BuildContext context, int index) async{
     return showDialog<void>(
       context: context,
@@ -176,12 +178,12 @@ class _MyHomePageState extends State<MyHomePage> {
       },
     );
   }
-
-  String getFileName(String url){
+  // Palauttaa tiedoston nimen URL-osoitteesta
+  String _getFileName(String url){
     return url.split('/').last;
   }
-
-  String formatDuration(Duration duration){
+  // Muotoilee keston merkkijonoksi
+  String _formatDuration(Duration duration){
     String twoDigits(int n){
       if(n>=10)return "$n";
       return "0$n";
@@ -190,7 +192,7 @@ class _MyHomePageState extends State<MyHomePage> {
     String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
     return "${twoDigits(duration.inHours)}:$twoDigitMinutes:$twoDigitSeconds";
   }
-
+  // Rakennetaan widgetin ulkoasu
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -213,7 +215,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 itemCount : audioFiles.length,
                 itemBuilder : (context, index){
                   return ListTile(
-                    title : Text(getFileName(audioFiles[index])),
+                    title : Text(_getFileName(audioFiles[index])),
                     onTap : (){
                       setState((){
                         currentTrackIndex = index;
@@ -236,8 +238,8 @@ class _MyHomePageState extends State<MyHomePage> {
               child : Row(
                 mainAxisAlignment : MainAxisAlignment.spaceBetween,
                 children:[
-                  Text(formatDuration(Duration(milliseconds : currentPosition.toInt())), style : TextStyle(fontSize :20)),
-                  Text(formatDuration(Duration(milliseconds :(totalDuration - currentPosition).toInt())), style : TextStyle(fontSize :20)),
+                  Text(_formatDuration(Duration(milliseconds : currentPosition.toInt())), style : TextStyle(fontSize :20)),
+                  Text(_formatDuration(Duration(milliseconds :(totalDuration - currentPosition).toInt())), style : TextStyle(fontSize :20)),
                 ],
               ),
             ),
