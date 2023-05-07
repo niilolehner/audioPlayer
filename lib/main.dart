@@ -55,6 +55,9 @@ class _MyHomePageState extends State<MyHomePage> {
         totalDuration = duration.inMilliseconds.toDouble();
       });
     });
+    audioPlayer.onPlayerCompletion.listen((event) {
+      _nextTrack();
+    });
   }
   // Vapautetaan resurssit/tallennetaan kun widget poistetaan
   @override
@@ -99,13 +102,17 @@ class _MyHomePageState extends State<MyHomePage> {
       });
     }
   }
-  // Siirrytään seuraavaan äänitiedostoon
   void _nextTrack() {
     if (currentTrackIndex < audioFiles.length - 1) {
       setState(() {
         currentTrackIndex++;
+        currentPosition = 0;
+        totalDuration = 0;
       });
       _play();
+    } else {
+      audioPlayer.stop();
+      isPlaying = false;
     }
   }
   // Siirrytään edelliseen äänitiedostoon
@@ -135,10 +142,20 @@ class _MyHomePageState extends State<MyHomePage> {
     _saveData();
   }
   // Poistetaan äänitiedosto
-  void _removeAudioFile(int index) async{
-    setState(() {audioFiles.removeAt(index);});
-    if(currentTrackIndex >= audioFiles.length){
-      currentTrackIndex = audioFiles.length -1;
+  void _removeAudioFile(int index) async {
+    if (index == currentTrackIndex) {
+      await audioPlayer.stop();
+      isPlaying = false;
+      setState(() {
+        currentPosition = 0.0;
+        totalDuration = 0.0;
+      });
+    }
+    setState(() {
+      audioFiles.removeAt(index);
+    });
+    if (currentTrackIndex >= audioFiles.length) {
+      currentTrackIndex = audioFiles.length - 1;
     }
     _saveData();
   }
@@ -150,7 +167,17 @@ class _MyHomePageState extends State<MyHomePage> {
 
     if (result != null) {
       File file = File(result.files.single.path!);
-      _addAudioFile(file);
+      String fileExtension = file.path.split('.').last;
+      List<String> compatibleExtensions = ['mp3', 'wav', 'ogg'];
+      if (compatibleExtensions.contains(fileExtension)) {
+        _addAudioFile(file);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Filetype incompatible.'),
+          ),
+        );
+      }
     }
   }
   // Näytetään dialogi äänitiedoston poistamiseksi
@@ -195,37 +222,44 @@ class _MyHomePageState extends State<MyHomePage> {
   // Rakennetaan widgetin ulkoasu
   @override
   Widget build(BuildContext context) {
+    // Ensure that currentPosition is within the valid range
+    if (currentPosition < 0) {
+      currentPosition = 0;
+    } else if (currentPosition > totalDuration) {
+      currentPosition = totalDuration;
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
-        actions:[
+        actions: [
           IconButton(
-            iconSize :48,
-            icon : Icon(Icons.add),
-            onPressed : () =>_showAddAudioDialog(context),
+            iconSize: 48,
+            icon: Icon(Icons.add),
+            onPressed: () => _showAddAudioDialog(context),
           ),
         ],
       ),
-      body : Center(
-        child : Column(
-          mainAxisAlignment : MainAxisAlignment.center,
-          children : <Widget>[
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
             Expanded(
-              child : ListView.builder(
-                itemCount : audioFiles.length,
-                itemBuilder : (context, index){
+              child: ListView.builder(
+                itemCount: audioFiles.length,
+                itemBuilder: (context, index) {
                   return ListTile(
-                    title : Text(_getFileName(audioFiles[index])),
-                    onTap : (){
-                      setState((){
+                    title: Text(_getFileName(audioFiles[index])),
+                    onTap: () {
+                      setState(() {
                         currentTrackIndex = index;
                       });
                       _play();
                       _saveData();
                     },
-                    trailing : IconButton(
-                      icon : Icon(Icons.delete),
-                      onPressed : () =>_showRemoveAudioDialog(context,index),
+                    trailing: IconButton(
+                      icon: Icon(Icons.delete),
+                      onPressed: () => _showRemoveAudioDialog(context, index),
                     ),
                     tileColor:
                     index == currentTrackIndex ? Colors.blue[50] : null,
@@ -234,23 +268,23 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
             Padding(
-              padding : const EdgeInsets.symmetric(horizontal :16.0),
-              child : Row(
-                mainAxisAlignment : MainAxisAlignment.spaceBetween,
-                children:[
-                  Text(_formatDuration(Duration(milliseconds : currentPosition.toInt())), style : TextStyle(fontSize :20)),
-                  Text(_formatDuration(Duration(milliseconds :(totalDuration - currentPosition).toInt())), style : TextStyle(fontSize :20)),
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(_formatDuration(Duration(milliseconds: currentPosition.toInt())), style: TextStyle(fontSize: 20)),
+                  Text(_formatDuration(Duration(milliseconds: (totalDuration - currentPosition).toInt())), style: TextStyle(fontSize: 20)),
                 ],
               ),
             ),
             Slider(
-              value : currentPosition,
-              min :0.0,
-              max : totalDuration,
-              onChanged :(double value)=>_seek(value),
+              value: currentPosition,
+              min: 0.0,
+              max: totalDuration,
+              onChanged: (double value) => _seek(value),
             ),
             Row(
-              mainAxisAlignment : MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
               children:[
                 IconButton(
                   iconSize :48,
