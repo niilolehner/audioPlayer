@@ -40,15 +40,26 @@ class _MyHomePageState extends State<MyHomePage> {
   int currentTrackIndex = 0;
   double currentPosition = 0.0;
   double totalDuration = 0.0;
+  List<int> prevPositions = [0, 0];
+  int lostPositions = 0;
   // Alustetaan tila
   @override
   void initState() {
     super.initState();
     _loadData();
-    audioPlayer.onAudioPositionChanged.listen((Duration position) {
+    audioPlayer.onAudioPositionChanged.listen((Duration duration) {
+      int positionChanged = duration.inMilliseconds;
+      if (prevPositions[1] > positionChanged) {
+        int diff = prevPositions[1] - prevPositions[0];
+        int tempNext = prevPositions[1] + diff;
+        lostPositions += tempNext - positionChanged;
+      }
+      int correctPosition = positionChanged + lostPositions;
       setState(() {
-        currentPosition = position.inMilliseconds.toDouble();
+        currentPosition = correctPosition.toDouble();
       });
+      prevPositions.add(positionChanged);
+      prevPositions.removeAt(0);
     });
     audioPlayer.onDurationChanged.listen((Duration duration) {
       setState(() {
@@ -90,6 +101,8 @@ class _MyHomePageState extends State<MyHomePage> {
     if (result == 1) {
       setState(() {
         isPlaying = true;
+        prevPositions = [0, 0];
+        lostPositions = 0;
       });
     }
   }
@@ -106,9 +119,8 @@ class _MyHomePageState extends State<MyHomePage> {
     if (currentTrackIndex < audioFiles.length - 1) {
       setState(() {
         currentTrackIndex++;
-        currentPosition = 0;
-        totalDuration = 0;
       });
+      _seek(0.0);
       _play();
     } else {
       audioPlayer.stop();
@@ -121,6 +133,7 @@ class _MyHomePageState extends State<MyHomePage> {
       setState(() {
         currentTrackIndex--;
       });
+      _seek(0.0);
       _play();
     }
   }
@@ -129,6 +142,8 @@ class _MyHomePageState extends State<MyHomePage> {
     int result = await audioPlayer.seek(Duration(milliseconds: position.toInt()));
     if (result == 1) {
       setState(() {
+        prevPositions = [0, 0];
+        lostPositions = 0;
         currentPosition = position;
       });
       _saveData();
@@ -206,11 +221,11 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
   // Palauttaa tiedoston nimen URL-osoitteesta
-  String _getFileName(String url){
+  String getFileName(String url){
     return url.split('/').last;
   }
   // Muotoilee keston merkkijonoksi
-  String _formatDuration(Duration duration){
+  String formatDuration(Duration duration){
     String twoDigits(int n){
       if(n>=10)return "$n";
       return "0$n";
@@ -222,7 +237,7 @@ class _MyHomePageState extends State<MyHomePage> {
   // Rakennetaan widgetin ulkoasu
   @override
   Widget build(BuildContext context) {
-    // Ensure that currentPosition is within the valid range
+    // Varmista, että currentPosition on kelvollisen alueen sisällä
     if (currentPosition < 0) {
       currentPosition = 0;
     } else if (currentPosition > totalDuration) {
@@ -249,7 +264,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 itemCount: audioFiles.length,
                 itemBuilder: (context, index) {
                   return ListTile(
-                    title: Text(_getFileName(audioFiles[index])),
+                    title: Text(getFileName(audioFiles[index])),
                     onTap: () {
                       setState(() {
                         currentTrackIndex = index;
@@ -272,8 +287,8 @@ class _MyHomePageState extends State<MyHomePage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(_formatDuration(Duration(milliseconds: currentPosition.toInt())), style: TextStyle(fontSize: 20)),
-                  Text(_formatDuration(Duration(milliseconds: (totalDuration - currentPosition).toInt())), style: TextStyle(fontSize: 20)),
+                  Text(formatDuration(Duration(milliseconds: currentPosition.toInt())), style: TextStyle(fontSize: 20)),
+                  Text(formatDuration(Duration(milliseconds: (totalDuration - currentPosition).toInt())), style: TextStyle(fontSize: 20)),
                 ],
               ),
             ),
