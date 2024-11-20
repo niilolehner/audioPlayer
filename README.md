@@ -1,1 +1,1 @@
-Audio Player for Android/iPhone using Flutter/Dart
+Audio Player for Android/iPhone
