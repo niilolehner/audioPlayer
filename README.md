@@ -1,1 +1,1 @@
-Audio Player for Android/iPhone
+Audio Player for Android/iPhone made with Flutter/Dart
